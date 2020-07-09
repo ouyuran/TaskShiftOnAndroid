@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.companion.AssociationRequest;
 import android.companion.BluetoothDeviceFilter;
 import android.companion.CompanionDeviceManager;
@@ -16,6 +17,13 @@ import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
+
+import java.io.IOException;
+import java.util.UUID;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -46,31 +54,36 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);*/
         }
-        deviceManager = getSystemService(CompanionDeviceManager.class);
-        deviceFilter = new BluetoothDeviceFilter.Builder().build();
-        pairingRequest = new AssociationRequest.Builder()
-                .addDeviceFilter(deviceFilter)
-                .setSingleDevice(false)
-                .build();
+        final Button button = findViewById(R.id.button);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                deviceManager = getSystemService(CompanionDeviceManager.class);
+                deviceFilter = new BluetoothDeviceFilter.Builder().build();
+                pairingRequest = new AssociationRequest.Builder()
+                        .addDeviceFilter(deviceFilter)
+                        .setSingleDevice(false)
+                        .build();
+                deviceManager.associate(pairingRequest,
+                        new CompanionDeviceManager.Callback() {
+                            @Override
+                            public void onDeviceFound(IntentSender chooserLauncher) {
+                                try {
+                                    startIntentSenderForResult(chooserLauncher,
+                                            SELECT_DEVICE_REQUEST_CODE, null, 0, 0, 0);
+                                } catch (IntentSender.SendIntentException e) {
+                                    e.printStackTrace();
+                                }
+                            }
 
-        deviceManager.associate(pairingRequest,
-                new CompanionDeviceManager.Callback() {
-                    @Override
-                    public void onDeviceFound(IntentSender chooserLauncher) {
-                        try {
-                            startIntentSenderForResult(chooserLauncher,
-                                    SELECT_DEVICE_REQUEST_CODE, null, 0, 0, 0);
-                        } catch (IntentSender.SendIntentException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                            @Override
+                            public void onFailure(CharSequence charSequence) {
 
-                    @Override
-                    public void onFailure(CharSequence charSequence) {
+                            }
+                        },
+                        null);
+            }
+        });
 
-                    }
-                },
-                null);
     }
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
@@ -82,9 +95,35 @@ public class MainActivity extends AppCompatActivity {
             BluetoothDevice deviceToPair =
                     data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
             deviceToPair.createBond();
-
             // ... Continue interacting with the paired device.
-            setContentView(R.layout.no_bluetooth);
+            Context context = getApplicationContext();
+
+
+            /*Need to change later
+            CharSequence text = "You have shifted " + "Task 3" + " to" + " Haoran Li" + ".";
+            int duration = Toast.LENGTH_SHORT;
+
+            Toast toast = Toast.makeText(context, text, duration);
+            toast.show();*/
+
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+            DynamicReceiver dynamicReceiver = new DynamicReceiver();
+            //注册广播接收
+            registerReceiver(dynamicReceiver,filter);
         }
     }
+
+
+    class DynamicReceiver extends BroadcastReceiver{
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //通过土司验证接收到广播
+            Toast t = Toast.makeText(context,"配对成功,正在连接", Toast.LENGTH_SHORT);
+            t.setGravity(Gravity.TOP,0,0);//方便录屏，将土司设置在屏幕顶端
+            t.show();
+
+        }
+    }
+
 }
