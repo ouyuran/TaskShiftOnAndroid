@@ -119,10 +119,14 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             //通过土司验证接收到广播
-            Toast t = Toast.makeText(context,"配对成功,正在连接", Toast.LENGTH_SHORT);
-            t.setGravity(Gravity.TOP,0,0);//方便录屏，将土司设置在屏幕顶端
-            t.show();
-
+            int bonded = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_NONE);
+            if (bonded == BluetoothDevice.BOND_BONDED) {
+                Toast t = Toast.makeText(context,"配对成功,正在连接", Toast.LENGTH_SHORT);
+                t.setGravity(Gravity.TOP,0,0);//方便录屏，将土司设置在屏幕顶端
+                t.show();
+                BluetoothDevice deviceToConnect =
+                        intent.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
+            }
         }
     }
 
