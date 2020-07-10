@@ -44,7 +44,8 @@ public class MainActivity extends AppCompatActivity {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
             setContentView(R.layout.no_bluetooth);
-        } else {
+        } else if (bluetoothAdapter.getScanMode() !=
+                BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
             // Enable  bluetooth and discoverability at the same time
             Intent discoverableIntent =
                     new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
@@ -121,11 +122,16 @@ public class MainActivity extends AppCompatActivity {
             //通过土司验证接收到广播
             int bonded = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_NONE);
             if (bonded == BluetoothDevice.BOND_BONDED) {
-                Toast t = Toast.makeText(context,"配对成功,正在连接", Toast.LENGTH_SHORT);
-                t.setGravity(Gravity.TOP,0,0);//方便录屏，将土司设置在屏幕顶端
-                t.show();
                 BluetoothDevice deviceToConnect =
                         intent.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
+                Toast t = Toast.makeText(context,"配对成功,正在连接: " + deviceToConnect.getName(), Toast.LENGTH_SHORT);
+                t.setGravity(Gravity.TOP,0,0);//方便录屏，将土司设置在屏幕顶端
+                t.show();
+
+            } else if (bonded == BluetoothDevice.BOND_NONE) {
+                Toast t = Toast.makeText(context,"配对失败,请重试", Toast.LENGTH_SHORT);
+                t.setGravity(Gravity.TOP,0,0);//方便录屏，将土司设置在屏幕顶端
+                t.show();
             }
         }
     }
