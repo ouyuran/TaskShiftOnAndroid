@@ -17,7 +17,7 @@ import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.Gravity;
+import android.os.ParcelUuid;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -32,9 +32,10 @@ public class MainActivity extends AppCompatActivity {
     private CompanionDeviceManager deviceManager;
     private AssociationRequest pairingRequest;
     private BluetoothDeviceFilter deviceFilter;
-
+    private UUID MY_UUID = UUID.fromString("try this");
     private static final int SELECT_DEVICE_REQUEST_CODE = 42;
-
+    private BluetoothDevice deviceToPair;
+    DynamicReceiver dynamicReceiver = new DynamicReceiver();
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,23 +94,14 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == SELECT_DEVICE_REQUEST_CODE &&
                 resultCode == Activity.RESULT_OK) {
             // User has chosen to pair with the Bluetooth device.
-            BluetoothDevice deviceToPair =
+            deviceToPair =
                     data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
             deviceToPair.createBond();
+
             // ... Continue interacting with the paired device.
             Context context = getApplicationContext();
-
-
-            /*Need to change later
-            CharSequence text = "You have shifted " + "Task 3" + " to" + " Haoran Li" + ".";
-            int duration = Toast.LENGTH_SHORT;
-
-            Toast toast = Toast.makeText(context, text, duration);
-            toast.show();*/
-
             IntentFilter filter = new IntentFilter();
             filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
-            DynamicReceiver dynamicReceiver = new DynamicReceiver();
             //注册广播接收
             registerReceiver(dynamicReceiver,filter);
         }
@@ -120,17 +112,23 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             //通过土司验证接收到广播
+
             int bonded = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_NONE);
             if (bonded == BluetoothDevice.BOND_BONDED) {
-                BluetoothDevice deviceToConnect =
-                        intent.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE);
-                Toast.makeText(context,"配对成功,正在连接: " + deviceToConnect.getName(), Toast.LENGTH_SHORT).show();
-
-
+                Toast.makeText(context,"配对成功,正在连接: " + deviceToPair.getName(), Toast.LENGTH_SHORT).show();
+                BluetoothSocket socket;
+                unregisterReceiver(dynamicReceiver);
+                try {
+                    socket = deviceToPair.createRfcommSocketToServiceRecord(MY_UUID);
+                    socket.connect();
+                    Toast.makeText(context,"已与 " + deviceToPair.getName() + "连接。", Toast.LENGTH_SHORT).show();
+                } catch (IOException e) {
+                    Toast.makeText(context,"未与 " + deviceToPair.getName() + "连接。", Toast.LENGTH_SHORT).show();
+                    e.printStackTrace();
+                }
             } else if (bonded == BluetoothDevice.BOND_NONE) {
                 Toast.makeText(context,"配对失败,请重试", Toast.LENGTH_SHORT).show();
             }
         }
     }
-
 }
