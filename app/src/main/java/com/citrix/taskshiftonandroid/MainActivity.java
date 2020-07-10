@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private CompanionDeviceManager deviceManager;
     private AssociationRequest pairingRequest;
     private BluetoothDeviceFilter deviceFilter;
-    private UUID MY_UUID = UUID.fromString("try this");
+    //private UUID MY_UUID = UUID.fromString("try this");
     private static final int SELECT_DEVICE_REQUEST_CODE = 42;
     private BluetoothDevice deviceToPair;
     DynamicReceiver dynamicReceiver = new DynamicReceiver();
@@ -117,9 +117,8 @@ public class MainActivity extends AppCompatActivity {
             if (bonded == BluetoothDevice.BOND_BONDED) {
                 Toast.makeText(context,"配对成功,正在连接: " + deviceToPair.getName(), Toast.LENGTH_SHORT).show();
                 BluetoothSocket socket;
-                unregisterReceiver(dynamicReceiver);
                 try {
-                    socket = deviceToPair.createRfcommSocketToServiceRecord(MY_UUID);
+                    socket = deviceToPair.createRfcommSocketToServiceRecord(UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d"));
                     socket.connect();
                     Toast.makeText(context,"已与 " + deviceToPair.getName() + "连接。", Toast.LENGTH_SHORT).show();
                 } catch (IOException e) {
