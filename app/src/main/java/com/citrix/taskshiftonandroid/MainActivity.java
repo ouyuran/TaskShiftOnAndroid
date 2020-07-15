@@ -27,6 +27,7 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Dictionary;
 import java.util.UUID;
 
 
@@ -82,6 +83,16 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         unregisterReceiver(discvoerReceiver);
         unregisterReceiver(dynamicReceiver);
+    }
+
+
+    private void sendTS(Dictionary ts) {
+        if (os == null) {
+            Toast.makeText(getApplicationContext(), "请先连接你的同事。", Toast.LENGTH_SHORT);
+            return;
+        }
+
+        os.write();
     }
 
     private final BroadcastReceiver discvoerReceiver = new BroadcastReceiver() {
