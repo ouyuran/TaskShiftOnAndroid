@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
             if (os != null) {
                 String confirm = mBlueAdapter.getName() + "已与您连接。";
                 os.write(confirm.getBytes("GBK"));
-                Toast.makeText(getApplicationContext()," " + "已与" + device.getName() + "连接", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext()," " + "已与" + device.getName() + "连接。", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
 
