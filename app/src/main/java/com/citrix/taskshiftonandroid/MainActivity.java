@@ -86,13 +86,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void sendTS(Dictionary ts) {
+    private void sendTS(Item ts) throws IOException {
         if (os == null) {
             Toast.makeText(getApplicationContext(), "请先连接你的同事。", Toast.LENGTH_SHORT);
             return;
         }
-
-        os.write();
+        os.write(ts.toString().getBytes("GBK"));
+        return;
     }
 
     private final BroadcastReceiver discvoerReceiver = new BroadcastReceiver() {
