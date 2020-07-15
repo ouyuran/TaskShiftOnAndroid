@@ -3,7 +3,6 @@ package com.citrix.taskshiftonandroid;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -21,8 +20,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.ParcelUuid;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -38,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     //客户端服务端一体
     private BluetoothSocket clientSocket;
     private BluetoothDevice deviceToPair;
+    private BluetoothDevice pairedDevice;
     private OutputStream os;
     private AcceptThread ac;
 
@@ -71,8 +69,54 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);*/
         }
+        ac = new AcceptThread();
+        ac.start();
+        newPair();
+        connectForPaired();
+        //开启接受线程
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(discvoerReceiver);
+        unregisterReceiver(dynamicReceiver);
+    }
+
+    private final BroadcastReceiver discvoerReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                String name = device.getName();
+                Toast.makeText(getApplicationContext(), name, Toast.LENGTH_LONG);
+                if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
+                    pairedDevice = device;
+                    tryConnect(pairedDevice);
+                }
+            } else if (BluetoothAdapter.ACTION_DISCOVERY_STARTED
+                    .equals(action)) {
+                Toast.makeText(getApplicationContext(), "开始查找熟人", Toast.LENGTH_SHORT);
+            }
+        }
+    };
+
+    public void connectForPaired() {
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        registerReceiver(discvoerReceiver, filter);
+        filter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+        registerReceiver(discvoerReceiver, filter);
+        if (mBlueAdapter.isDiscovering()) {
+            mBlueAdapter.cancelDiscovery();
+        }
+        mBlueAdapter.startDiscovery();
+    }
+    public void newPair() {
         final Button button = findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.O)
             public void onClick(View v) {
                 deviceManager = getSystemService(CompanionDeviceManager.class);
                 deviceFilter = new BluetoothDeviceFilter.Builder().build();
@@ -100,9 +144,6 @@ public class MainActivity extends AppCompatActivity {
                         null);
             }
         });
-        //开启接受线程
-        ac = new AcceptThread();
-        ac.start();
     }
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
@@ -133,14 +174,13 @@ public class MainActivity extends AppCompatActivity {
             int bonded = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_NONE);
             if (bonded == BluetoothDevice.BOND_BONDED) {
                 Toast.makeText(context,"配对成功,正在连接: " + deviceToPair.getName(), Toast.LENGTH_SHORT).show();
-                tryConnect();
-                Toast.makeText(context,"已与 " + deviceToPair.getName() + "连接。", Toast.LENGTH_SHORT).show();
+                tryConnect(deviceToPair);
             } else if (bonded == BluetoothDevice.BOND_NONE) {
                 Toast.makeText(context,"配对失败,请重试", Toast.LENGTH_SHORT).show();
             }
         }
     }
-    public void tryConnect() {
+    public void tryConnect(BluetoothDevice device) {
         // 主动连接蓝牙
         try {
             // 判断是否在搜索,如果在搜索，就取消搜索
@@ -149,15 +189,17 @@ public class MainActivity extends AppCompatActivity {
             }
             try {
 
-                clientSocket = deviceToPair
+                clientSocket = device
                         .createRfcommSocketToServiceRecord(MY_UUID);
                 clientSocket.connect();
                 os = clientSocket.getOutputStream();
             } catch (Exception e) {
-                Toast.makeText(getApplicationContext()," " + deviceToPair.getName() + "连接失败。", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext()," " + device.getName() + "连接失败。", Toast.LENGTH_SHORT).show();
             }
             if (os != null) {
-                os.write("123456".getBytes());
+                String confirm = mBlueAdapter.getName() + "已与您连接。";
+                os.write(confirm.getBytes("GBK"));
+                Toast.makeText(getApplicationContext()," " + "已与" + device.getName() + "连接", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
 
