@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private CompanionDeviceManager deviceManager;
     private AssociationRequest pairingRequest;
     private BluetoothDeviceFilter deviceFilter;
-    //private UUID MY_UUID = UUID.fromString("try this");
+    private UUID MY_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
     private static final int SELECT_DEVICE_REQUEST_CODE = 42;
 
     private BluetoothAdapter mBlueAdapter;
@@ -150,14 +150,14 @@ public class MainActivity extends AppCompatActivity {
             try {
 
                 clientSocket = deviceToPair
-                        .createRfcommSocketToServiceRecord(UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d"));
+                        .createRfcommSocketToServiceRecord(MY_UUID);
                 clientSocket.connect();
                 os = clientSocket.getOutputStream();
             } catch (Exception e) {
                 Toast.makeText(getApplicationContext()," " + deviceToPair.getName() + "连接失败。", Toast.LENGTH_SHORT).show();
             }
             if (os != null) {
-                os.write("老板，准备接受任务".getBytes());
+                os.write("123456".getBytes());
             }
         } catch (Exception e) {
 
@@ -184,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
         public AcceptThread() {
             try {
                 serverSocket = mBlueAdapter
-                        .listenUsingRfcommWithServiceRecord("同事", UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d"));
+                        .listenUsingRfcommWithServiceRecord("同事", MY_UUID);
             } catch (IOException e) {
                 e.printStackTrace();
             }
