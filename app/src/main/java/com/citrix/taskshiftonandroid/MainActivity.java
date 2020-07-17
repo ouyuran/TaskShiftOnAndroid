@@ -40,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private OutputStream os;
     private AcceptThread ac;
 
+    //指
+    private int numTexts;
     //private static final int REQUEST_ENABLE_BT = 1;
     private CompanionDeviceManager deviceManager;
     private AssociationRequest pairingRequest;
@@ -56,28 +58,71 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         // Check for available Bluetooth adapter and enables it if it isn't.
+        initializeBluetooth();
+        initializeButtons();
+        ac = new AcceptThread();
+        ac.start();
+        connectForPaired();
+        //开启接受线程
+
+    }
+    private void initializeBluetooth() {
         mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBlueAdapter == null) {
             setContentView(R.layout.no_bluetooth);
         } else if (mBlueAdapter.getScanMode() !=
                 BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
-            // Enable  bluetooth and discoverability at the same time
             Intent discoverableIntent =
                     new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
             discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
             startActivity(discoverableIntent);
-            /* if (!bluetoothAdapter.isEnabled())
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);*/
         }
-        ac = new AcceptThread();
-        ac.start();
-        newPair();
-        connectForPaired();
-        //开启接受线程
-
     }
 
+    private void initializeButtons() {
+        // Button for pairing new Device
+        final Button button = findViewById(R.id.button);
+        button.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.O)
+            public void onClick(View v) {
+                deviceManager = getSystemService(CompanionDeviceManager.class);
+                deviceFilter = new BluetoothDeviceFilter.Builder().build();
+                pairingRequest = new AssociationRequest.Builder()
+                        .addDeviceFilter(deviceFilter)
+                        .setSingleDevice(false)
+                        .build();
+                deviceManager.associate(pairingRequest,
+                        new CompanionDeviceManager.Callback() {
+                            @Override
+                            public void onDeviceFound(IntentSender chooserLauncher) {
+                                try {
+                                    startIntentSenderForResult(chooserLauncher,
+                                            SELECT_DEVICE_REQUEST_CODE, null, 0, 0, 0);
+                                } catch (IntentSender.SendIntentException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(CharSequence charSequence) {
+
+                            }
+                        },
+                        null);
+            }
+        });
+        // Button for sending a testMsg
+        final Button button2 = findViewById(R.id.button2);
+        button2.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                try {
+                    sendTS("test test");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -86,12 +131,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void sendTS(Item ts) throws IOException {
+    private void sendTS(String ts) throws IOException {
         if (os == null) {
             Toast.makeText(getApplicationContext(), "请先连接你的同事。", Toast.LENGTH_SHORT);
             return;
         }
-        os.write(ts.toString().getBytes("GBK"));
+        os.write(ts.getBytes("GBK"));
         return;
     }
 
@@ -123,38 +168,6 @@ public class MainActivity extends AppCompatActivity {
             mBlueAdapter.cancelDiscovery();
         }
         mBlueAdapter.startDiscovery();
-    }
-    public void newPair() {
-        final Button button = findViewById(R.id.button);
-        button.setOnClickListener(new View.OnClickListener() {
-            @RequiresApi(api = Build.VERSION_CODES.O)
-            public void onClick(View v) {
-                deviceManager = getSystemService(CompanionDeviceManager.class);
-                deviceFilter = new BluetoothDeviceFilter.Builder().build();
-                pairingRequest = new AssociationRequest.Builder()
-                        .addDeviceFilter(deviceFilter)
-                        .setSingleDevice(false)
-                        .build();
-                deviceManager.associate(pairingRequest,
-                        new CompanionDeviceManager.Callback() {
-                            @Override
-                            public void onDeviceFound(IntentSender chooserLauncher) {
-                                try {
-                                    startIntentSenderForResult(chooserLauncher,
-                                            SELECT_DEVICE_REQUEST_CODE, null, 0, 0, 0);
-                                } catch (IntentSender.SendIntentException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(CharSequence charSequence) {
-
-                            }
-                        },
-                        null);
-            }
-        });
     }
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
