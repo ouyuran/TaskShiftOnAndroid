@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private OutputStream os;
     private AcceptThread ac;
 
-    //指
+    //指收到了多少条消息，从第二条开始就已经是ITem了
     private int numTexts;
     //private static final int REQUEST_ENABLE_BT = 1;
     private CompanionDeviceManager deviceManager;
@@ -232,9 +232,16 @@ public class MainActivity extends AppCompatActivity {
 
     private Handler handler = new Handler() {
         public void handleMessage(Message msg) {
-            Toast.makeText(getApplicationContext(), String.valueOf(msg.obj),
-                    Toast.LENGTH_SHORT).show();
-            super.handleMessage(msg);
+            numTexts++;
+            if (numTexts == 1) {
+                Toast.makeText(getApplicationContext(), String.valueOf(msg.obj),
+                        Toast.LENGTH_SHORT).show();
+                super.handleMessage(msg);
+            } else {
+                Toast.makeText(getApplicationContext(), String.valueOf(msg.obj) + "Item",
+                        Toast.LENGTH_SHORT).show();
+                super.handleMessage(msg);
+            }
         }
     };
 
