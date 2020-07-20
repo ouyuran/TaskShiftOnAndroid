@@ -33,6 +33,7 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
+    short rssi;
     //客户端服务端一体
     private BluetoothSocket clientSocket;
     private BluetoothDevice deviceToPair;
@@ -133,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void sendTS(String ts) throws IOException {
         if (os == null) {
-            Toast.makeText(getApplicationContext(), "请先连接你的同事。", Toast.LENGTH_SHORT);
+            Toast.makeText(getApplicationContext(), "请先连接你的同事。", Toast.LENGTH_SHORT).show();
             return;
         }
         os.write(ts.getBytes("GBK"));
@@ -146,23 +147,17 @@ public class MainActivity extends AppCompatActivity {
 
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                String name = device.getName();
-                Toast.makeText(getApplicationContext(), name, Toast.LENGTH_LONG);
                 if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
                     pairedDevice = device;
+                    rssi = intent.getExtras().getShort(BluetoothDevice.EXTRA_RSSI);
                     tryConnect(pairedDevice);
                 }
-            } else if (BluetoothAdapter.ACTION_DISCOVERY_STARTED
-                    .equals(action)) {
-                Toast.makeText(getApplicationContext(), "开始查找熟人", Toast.LENGTH_SHORT);
             }
         }
     };
 
     public void connectForPaired() {
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(discvoerReceiver, filter);
-        filter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
         registerReceiver(discvoerReceiver, filter);
         if (mBlueAdapter.isDiscovering()) {
             mBlueAdapter.cancelDiscovery();
@@ -194,7 +189,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             //通过土司验证接收到广播
-
             int bonded = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_NONE);
             if (bonded == BluetoothDevice.BOND_BONDED) {
                 Toast.makeText(context,"配对成功,正在连接: " + deviceToPair.getName(), Toast.LENGTH_SHORT).show();
@@ -221,9 +215,9 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext()," " + device.getName() + "连接失败。", Toast.LENGTH_SHORT).show();
             }
             if (os != null) {
-                String confirm = mBlueAdapter.getName() + "已与您连接。";
+                String confirm = mBlueAdapter.getName() + "已与您连接。信号强度: " + Short.toString(rssi);
                 os.write(confirm.getBytes("GBK"));
-                Toast.makeText(getApplicationContext()," " + "已与" + device.getName() + "连接。", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext()," " + "已与" + device.getName() + "连接。信号强度: " + rssi, Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
 
