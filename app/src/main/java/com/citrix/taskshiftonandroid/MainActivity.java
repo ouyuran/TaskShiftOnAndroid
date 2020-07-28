@@ -8,6 +8,10 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
+import android.bluetooth.le.AdvertiseCallback;
+import android.bluetooth.le.AdvertiseData;
+import android.bluetooth.le.AdvertiseSettings;
+import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.companion.AssociationRequest;
 import android.companion.BluetoothDeviceFilter;
 import android.companion.CompanionDeviceManager;
@@ -20,6 +24,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.ParcelUuid;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -27,6 +33,8 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.util.Dictionary;
 import java.util.UUID;
 
@@ -40,7 +48,8 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothDevice pairedDevice;
     private OutputStream os;
     private AcceptThread ac;
-
+    private BluetoothLeAdvertiser advertiser;
+    private AdvertiseSettings settings;
     //指收到了多少条消息，从第二条开始就已经是ITem了
     private int numTexts;
     //private static final int REQUEST_ENABLE_BT = 1;
@@ -48,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private AssociationRequest pairingRequest;
     private BluetoothDeviceFilter deviceFilter;
     private UUID MY_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
+    private ParcelUuid pUuid = new ParcelUuid(MY_UUID);
     private static final int SELECT_DEVICE_REQUEST_CODE = 42;
 
     private BluetoothAdapter mBlueAdapter;
@@ -67,8 +77,15 @@ public class MainActivity extends AppCompatActivity {
         //开启接受线程
 
     }
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void initializeBluetooth() {
         mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
+        advertiser = BluetoothAdapter.getDefaultAdapter().getBluetoothLeAdvertiser();
+        settings = new AdvertiseSettings.Builder()
+                .setAdvertiseMode( AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY )
+                .setTxPowerLevel( AdvertiseSettings.ADVERTISE_TX_POWER_HIGH )
+                .setConnectable( true )
+                .build();
         if (mBlueAdapter == null) {
             setContentView(R.layout.no_bluetooth);
         } else if (mBlueAdapter.getScanMode() !=
@@ -123,6 +140,41 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        final Button button3 = findViewById(R.id.button3);
+        button3.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+            public void onClick(View v) {
+                try {
+                    advertise();
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public void advertise() throws UnsupportedEncodingException {
+        System.out.println(mBlueAdapter.getAddress());
+        AdvertiseData data = new AdvertiseData.Builder().setIncludeDeviceName(true)
+                //.addServiceData(pUuid, "1".getBytes( Charset.forName( "UTF-8" ) ))
+                .build();
+        AdvertiseCallback advertisingCallback = new AdvertiseCallback() {
+            @Override
+            public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+                Log.e("BLE", "onStart Success");
+                super.onStartSuccess(settingsInEffect);
+            }
+
+            @Override
+            public void onStartFailure(int errorCode) {
+                Log.e( "BLE", "Advertising onStartFailure: " + errorCode );
+                super.onStartFailure(errorCode);
+            }
+        };
+
+        advertiser.startAdvertising( settings, data, advertisingCallback );
     }
     @Override
     protected void onDestroy() {
