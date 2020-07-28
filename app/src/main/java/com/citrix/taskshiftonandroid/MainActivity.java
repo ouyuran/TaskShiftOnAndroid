@@ -12,6 +12,11 @@ import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.companion.AssociationRequest;
 import android.companion.BluetoothDeviceFilter;
 import android.companion.CompanionDeviceManager;
@@ -25,20 +30,27 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.ParcelUuid;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Dictionary;
+import java.util.List;
 import java.util.UUID;
 
 
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class MainActivity extends AppCompatActivity {
 
     short rssi;
@@ -50,6 +62,9 @@ public class MainActivity extends AppCompatActivity {
     private AcceptThread ac;
     private BluetoothLeAdvertiser advertiser;
     private AdvertiseSettings settings;
+    private BluetoothLeScanner mBluetoothLeScanner;
+    private Handler mHandler = new Handler();
+    private ScanSettings scanSettings;
     //指收到了多少条消息，从第二条开始就已经是ITem了
     private int numTexts;
     //private static final int REQUEST_ENABLE_BT = 1;
@@ -59,6 +74,33 @@ public class MainActivity extends AppCompatActivity {
     private UUID MY_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
     private ParcelUuid pUuid = new ParcelUuid(MY_UUID);
     private static final int SELECT_DEVICE_REQUEST_CODE = 42;
+    private ScanCallback mScanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            super.onScanResult(callbackType, result);
+            if( result == null
+                    || result.getDevice() == null
+                    || TextUtils.isEmpty(result.getDevice().getName()) )
+                return;
+
+            StringBuilder builder = new StringBuilder( result.getDevice().getName() );
+
+            builder.append("\n").append(new String(result.getScanRecord().getServiceData(result.getScanRecord().getServiceUuids().get(0)), Charset.forName("UTF-8")));
+            final TextView mText = findViewById(R.id.textView2);
+            mText.setText(builder.toString());
+        }
+
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            super.onBatchScanResults(results);
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            Log.e( "BLE", "Discovery onScanFailed: " + errorCode );
+            super.onScanFailed(errorCode);
+        }
+    };
 
     private BluetoothAdapter mBlueAdapter;
     //配对成功的Receiver
@@ -81,6 +123,10 @@ public class MainActivity extends AppCompatActivity {
     private void initializeBluetooth() {
         mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
         advertiser = BluetoothAdapter.getDefaultAdapter().getBluetoothLeAdvertiser();
+        mBluetoothLeScanner = BluetoothAdapter.getDefaultAdapter().getBluetoothLeScanner();
+        scanSettings = new ScanSettings.Builder()
+                .setScanMode( ScanSettings.SCAN_MODE_LOW_LATENCY )
+                .build();
         settings = new AdvertiseSettings.Builder()
                 .setAdvertiseMode( AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY )
                 .setTxPowerLevel( AdvertiseSettings.ADVERTISE_TX_POWER_HIGH )
@@ -152,8 +198,25 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-    }
+        final Button button5 = findViewById(R.id.button5);
+        button5.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+            public void onClick(View v) {
+                discover();
+            }
+        });
 
+    }
+    public void discover() {
+        List<ScanFilter> filters = new ArrayList<>();
+        mBluetoothLeScanner.startScan(filters, scanSettings, mScanCallback);
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mBluetoothLeScanner.stopScan(mScanCallback);
+            }
+        }, 100000);
+    }
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public void advertise() throws UnsupportedEncodingException {
         System.out.println(mBlueAdapter.getAddress());
